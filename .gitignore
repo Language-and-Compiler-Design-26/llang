@@ -1,0 +1,38 @@
+# ---- OCaml / Dune ----
+_build/
+*.install
+.merlin
+*.annot
+*.cmi
+*.cmo
+*.cmx
+*.cmt
+*.cmti
+*.cma
+*.cmxa
+*.cmxs
+*.o
+*.a
+*.out
+*.bc
+*.opam
+.opam/
+*.native
+*.byte
+*.exe
+.dune/
+
+# dune-project generated lock dirs
+dune.lock/
+
+# ---- Rust / Cargo ----
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# ---- Editors / OS ----
+.vscode/
+.idea/
+*.swp
+.DS_Store

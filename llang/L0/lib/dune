@@ -1,0 +1,22 @@
+(ocamllex
+ (modules lexer))
+
+(ocamlyacc
+ (modules parser))
+
+(library
+ (name llang)
+ (modules ast 
+          ast_typed
+          parser_utils 
+          parser 
+          lexer 
+          interpreter 
+          typing           
+          compiler_llvm
+          llvm_api_utils
+          llvm_utils
+          environment
+          symbols
+          )
+ (libraries llvm llvm.analysis llvm.bitwriter))
