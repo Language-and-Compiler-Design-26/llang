@@ -1,0 +1,66 @@
+use std::rc::Rc;
+use crate::ast::{Ast, Type, AstData, TypeData, BinOp, UnOp};
+
+grammar;
+
+match {
+    r"\s*" => {},
+    _
+}
+
+pub Cond: Ast = {
+    Disj,
+};
+
+pub Disj: Ast = {
+    <e1:Disj> "||" <e2:Conj> => Rc::new(AstData::BinOp(BinOp::Or, e1, e2)),
+    Conj,
+};
+
+pub Conj: Ast = {
+    <e1:Conj> "&&" <e2:BExpr> => Rc::new(AstData::BinOp(BinOp::And,e1,e2)),
+    BExpr
+};
+
+pub BExpr: Ast = {
+    "not" <e:BExpr> => Rc::new(AstData::UnOp(UnOp::Not,e)),
+    Comp,
+};
+
+pub Comp: Ast = {
+    <e1:Comp> "=" <e2:Expr> => Rc::new(AstData::BinOp(BinOp::Eq, e1, e2)),
+    <e1:Comp> "<>" <e2:Expr> => Rc::new(AstData::BinOp(BinOp::Ne, e1, e2)),
+    <e1:Comp> "<" <e2:Expr> => Rc::new(AstData::BinOp(BinOp::Lt, e1, e2)),
+    <e1:Comp> "<=" <e2:Expr> => Rc::new(AstData::BinOp(BinOp::Le, e1, e2)),
+    <e1:Comp> ">" <e2:Expr> => Rc::new(AstData::BinOp(BinOp::Gt, e1, e2)),
+    <e1:Comp> ">=" <e2:Expr> => Rc::new(AstData::BinOp(BinOp::Ge, e1, e2)),
+    Expr
+};
+
+pub Expr: Ast = {
+    <l:Expr> "+" <r:Term> => Rc::new(AstData::BinOp(BinOp::Add, l, r)),
+    <l:Expr> "-" <r:Term> => Rc::new(AstData::BinOp(BinOp::Sub, l, r)),
+    Term,
+};
+
+Term: Ast = {
+    <l:Term> "*" <r:Call> => Rc::new(AstData::BinOp(BinOp::Mul, l, r)),
+    <l:Term> "/" <r:Call> => Rc::new(AstData::BinOp(BinOp::Div, l, r)),
+    Call,
+};
+
+Call: Ast = {
+    "-" <e:Factor> => Rc::new(AstData::UnOp(UnOp::Neg, e)),
+    Factor,
+};
+
+Factor: Ast = {
+    <n:Num> => Rc::new(AstData::Num(n)),
+    "true" => Rc::new(AstData::Bool(true)),
+    "false" => Rc::new(AstData::Bool(false)),
+    "(" <e:Cond> ")" => e,
+};
+
+Num: i64 = r"[0-9]+" => <>.parse().unwrap();
+Id: String = r"[a-zA-Z_][a-zA-Z0-9_]*" => <>.to_string();
+

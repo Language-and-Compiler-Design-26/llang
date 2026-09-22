@@ -1,0 +1,12 @@
+[package]
+name = "llang-rust"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+inkwell = { version = "0.5", features = ["llvm18-0"] }
+lalrpop-util = { version = "0.22", features = ["lexer"] }
+regex = "1"
+
+[build-dependencies]
+lalrpop = "0.22"

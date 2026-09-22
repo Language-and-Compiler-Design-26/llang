@@ -1,0 +1,5 @@
+[env]
+LLVM_SYS_180_PREFIX = "/opt/homebrew/opt/llvm@18"
+
+[build]
+rustflags = ["-L", "/opt/homebrew/lib"]
