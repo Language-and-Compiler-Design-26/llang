@@ -24,6 +24,9 @@ main:
   cond EOF                  { $1 }
 
 cond:
+  | FUN LPAREN ID COLON l_type RPAREN ARROW cond { Abs ((new_symbol $3),$5,$8) }
+  | LET ID EQ cond IN cond       { Let ((new_symbol $2), $4, $6) }
+  | IF cond THEN cond ELSE cond  { If ($2, $4, $6) }
   | disj                         { $1 }
 
 disj:
@@ -60,11 +63,21 @@ term:
 
 call: 
   | MINUS factor            { UnOp (Neg, $2) }
+  | call factor             { BinOp(App,$1,$2) }
   | factor                  { $1 }
 
 factor:
   | INT                     { Num $1 }
   | TRUE                    { Bool true }
   | FALSE                   { Bool false }
+  | ID                      { Id (new_symbol $1) }
   | LPAREN cond RPAREN      { $2 }
+
+l_type: 
+  | btype ARROW l_type        { TArrow ($1,$3)}
+  | btype                   { $1 }
+
+btype:
+  | TINT                    { TInt }
+  | TBOOL                   { TBool }
 

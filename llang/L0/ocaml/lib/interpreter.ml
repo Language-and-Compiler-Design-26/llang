@@ -39,6 +39,19 @@ let rec eval env = function
 
   | UnOp (op, e) -> native_eval_un_op op (eval env e)
   
+    | If (cond, then_branch, else_branch) ->
+      if bool_from_value (eval env cond) 
+        then eval env then_branch else eval env else_branch
+  
+  | Let (id, e1, e2) ->
+      let v1 = eval env e1 in 
+      let new_env = env |>  begin_scope |> add_binding id v1 in
+      eval new_env e2 (* no need for, but new_env |> end_scope *)
+
+  | Id id -> Environment.lookup id env
+
+  | Abs (id,_,e) -> Closure(id,e,env)
+
 and native_eval_bin_op op v1 v2 =
   match op with
   | Add -> value_from_int (int_from_value v1 + int_from_value v2)
@@ -63,6 +76,13 @@ and native_eval_bin_op op v1 v2 =
       | Ge -> value_from_bool (b1 >= b2)
       | _ -> assert false)
     | _ -> failwith "Unsupported binary operator for non matching types"
+  end
+  | App -> begin match v1 with
+    | Closure(id,e,env_closure) -> 
+        let new_env = env_closure |> begin_scope |> add_binding id v2 in
+        eval new_env e
+
+    | _ -> failwith("Value not a function, cannot be called.")
   end
 
 let eval = eval Environment.empty

@@ -54,6 +54,20 @@ let emit_instr builder blocks regs = function
   | Divi32 (r, p1, p2) ->
     let v = Llvm.build_sdiv (llvalue_of_result regs p1) (llvalue_of_result regs p2) (llvm_reg_name r) builder in
     Hashtbl.replace regs r v
+  | BrI1 (cond, l1, l2) ->
+    let cond_v = llvalue_of_result regs cond in
+    let zero = Llvm.const_int i32_type 0 in
+    let cond_bit = Llvm.build_icmp Llvm.Icmp.Ne cond_v zero "brcond" builder in
+    ignore (Llvm.build_cond_br cond_bit (block_of_label blocks l1) (block_of_label blocks l2) builder)
+  | Br l ->
+    ignore (Llvm.build_br (block_of_label blocks l) builder)
+  | Phi (r, incoming) ->
+    let incoming_llvm =
+      List.map (fun (res, l) -> (llvalue_of_result regs res, block_of_label blocks l)) incoming
+    in
+    let v = Llvm.build_phi incoming_llvm (llvm_reg_name r) builder in
+    Hashtbl.replace regs r v
+
   | Cmp (r, op, p1, p2, t) ->
     let llvm_op =
       match op with

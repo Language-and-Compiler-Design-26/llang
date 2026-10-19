@@ -5,7 +5,7 @@ source_filename = "demo"
 
 define i32 @main() {
 label_0:
-  %printf_call = call i32 (ptr, ...) @printf(ptr @fmt, i32 2)
+  %printf_call = call i32 (ptr, ...) @printf(ptr @fmt, i32 4)
   ret i32 0
 }
 

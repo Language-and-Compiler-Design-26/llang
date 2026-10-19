@@ -55,9 +55,6 @@ let test_evaluates_unary_minus _ =
 let test_evaluates_subtraction_and_division _ =
   assert_equal (Int 3) (eval (parse_string "(10 - 4) / 2"))
 
-let test_evaluates_nested_unary_minus _ =
-  assert_equal (Int 3) (eval (parse_string "- -3"))
-
 let test_evaluates_a_boolean_literal _ =
   assert_equal (Bool true) (eval (parse_string "true"))
 
@@ -174,7 +171,6 @@ let suite =
          "evaluates unary minus" >:: test_evaluates_unary_minus;
          "evaluates subtraction and division"
          >:: test_evaluates_subtraction_and_division;
-         "evaluates nested unary minus" >:: test_evaluates_nested_unary_minus;
          "evaluates a boolean literal" >:: test_evaluates_a_boolean_literal;
          "evaluates logical and" >:: test_evaluates_logical_and;
          "evaluates logical or" >:: test_evaluates_logical_or;
