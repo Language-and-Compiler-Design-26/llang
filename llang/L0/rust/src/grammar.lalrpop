@@ -1,5 +1,6 @@
 use std::rc::Rc;
 use crate::ast::{Ast, Type, AstData, TypeData, BinOp, UnOp};
+use crate::symbols::new_symbol;
 
 grammar;
 
@@ -9,6 +10,9 @@ match {
 }
 
 pub Cond: Ast = {
+    "fun" "(" <id:Id> ":" <t:Type> ")" "->" <e:Cond> => Rc::new(AstData::Abs(new_symbol(id.as_str()), t, e)),
+    "let" <id:Id> "=" <def:Cond> "in" <body:Cond> => Rc::new(AstData::Let(new_symbol(id.as_str()), def, body)),
+    "if" <cond:Cond> "then" <then_e:Cond> "else" <else_e:Cond> => Rc::new(AstData::If(cond,then_e,else_e)),
     Disj,
 };
 
@@ -51,6 +55,7 @@ Term: Ast = {
 
 Call: Ast = {
     "-" <e:Factor> => Rc::new(AstData::UnOp(UnOp::Neg, e)),
+    <f:Call> <arg:Factor> => Rc::new(AstData::BinOp(BinOp::App, f, arg)),
     Factor,
 };
 
@@ -58,9 +63,19 @@ Factor: Ast = {
     <n:Num> => Rc::new(AstData::Num(n)),
     "true" => Rc::new(AstData::Bool(true)),
     "false" => Rc::new(AstData::Bool(false)),
-    "(" <e:Cond> ")" => e,
+    <id:Id> => Rc::new(AstData::Id(new_symbol(id.as_str()))),
+    "(" <Cond> ")",
 };
+
+BType: Type = {
+    "int" => Rc::new(TypeData::Int),
+    "bool" => Rc::new(TypeData::Bool),
+};
+
+Type : Type = {
+    <t1:BType> "->" <t2:Type> => Rc::new(TypeData::Arrow(t1, t2)),
+    BType,
+}
 
 Num: i64 = r"[0-9]+" => <>.parse().unwrap();
 Id: String = r"[a-zA-Z_][a-zA-Z0-9_]*" => <>.to_string();
-

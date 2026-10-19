@@ -1,21 +1,21 @@
 use lalrpop_util::lalrpop_mod;
 use std::io::{self, BufRead, Write};
 
-use std::rc::Rc;
-use environment::Env;
+use crate::codegen::Compile;
 use crate::interpreter::Eval;
 use crate::typing::TypeCheck;
-use crate::codegen::Compile;
+use environment::Env;
+use std::rc::Rc;
 
 mod ast;
-mod symbols;
-mod interpreter;
-mod environment;
 mod ast_typed;
-mod typing;
 mod codegen;
-mod llvm_utils;
+mod environment;
+mod interpreter;
 mod llvm_generator;
+mod llvm_utils;
+mod symbols;
+mod typing;
 
 lalrpop_mod!(pub grammar);
 fn main() {
@@ -43,45 +43,40 @@ fn main() {
         }
 
         match parser.parse(line) {
-            Ok(expr) => 
-                match expr.type_check(Rc::new(Env::new())) {
-                    Ok(typed) => {
-                        match expr.eval(Rc::new(Env::new())) {
-                            Ok(val) => {
-                                println!("{:?} = {:?}", expr, val);
-                                match typed.compile() {
-                                    Ok(cu) => {
+            Ok(expr) => match expr.type_check(Rc::new(Env::new())) {
+                Ok(typed) => match expr.eval(Rc::new(Env::new())) {
+                    Ok(val) => {
+                        println!("{:?} = {:?}", expr, val);
+                        match typed.compile() {
+                            Ok(cu) => {
+                                llvm_utils::print_compilation_unit(&cu);
 
-                                        llvm_utils::print_compilation_unit(&cu);
-
-                                        match llvm_generator::llvm_as_string(&cu) {
-                                            Ok(ir) => println!("{}", ir),
-                                            Err(err) => println!("failed to produce llvm code: {}", err),
-                                        }
-
-                                        match llvm_generator::write_llvm_text_file(&cu, "output.ll") {
-                                            Ok(()) => println!("wrote LLVM IR to output.ll"),
-                                            Err(err) => println!("failed to write output.ll: {}", err),
-                                        }
-
-                                        match llvm_generator::write_llvm_bitcode_to_file(&cu, "output.bc") {
-                                            Ok(()) => println!("wrote LLVM IR to output.bc"),
-                                            Err(err) => println!("failed to write output.bc: {}", err),
-                                        }
-                                    },
-                                    Err(err) => println!("compile error: {}", err)
+                                match llvm_generator::llvm_as_string(&cu) {
+                                    Ok(ir) => println!("{}", ir),
+                                    Err(err) => println!("failed to produce llvm code: {}", err),
                                 }
-                            },
-                            Err(err) => println!("Execution Error: {}", err)
+
+                                match llvm_generator::write_llvm_text_file(&cu, "output.ll") {
+                                    Ok(()) => println!("wrote LLVM IR to output.ll"),
+                                    Err(err) => println!("failed to write output.ll: {}", err),
+                                }
+
+                                match llvm_generator::write_llvm_bitcode_to_file(&cu, "output.bc") {
+                                    Ok(()) => println!("wrote LLVM IR to output.bc"),
+                                    Err(err) => println!("failed to write output.bc: {}", err),
+                                }
+                            }
+                            Err(err) => println!("compile error: {}", err),
                         }
-                    },
-                    Err(err) => println!("type error: {}", err)
+                    }
+                    Err(err) => println!("Execution Error: {}", err),
                 },
-                Err(err) => println!("parse error: {}", err),
+                Err(err) => println!("type error: {}", err),
+            },
+            Err(err) => println!("parse error: {}", err),
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests;

@@ -6,6 +6,7 @@ pub type Type = Rc<TypeData>;
 pub enum TypeData {
     Int,
     Bool,
+    Arrow(Type, Type),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -22,6 +23,7 @@ pub enum BinOp {
     Ne,
     Le,
     Ge,
+    App,
 }
 
 pub type Symbol = i64;
@@ -29,7 +31,7 @@ pub type Symbol = i64;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum UnOp {
     Neg,
-    Not
+    Not,
 }
 
 pub type Ast = Rc<AstData>;
@@ -40,5 +42,8 @@ pub enum AstData {
     Bool(bool),
     BinOp(BinOp, Ast, Ast),
     UnOp(UnOp, Ast),
+    If(Ast, Ast, Ast),
+    Let(Symbol, Ast, Ast),
+    Id(Symbol),
+    Abs(Symbol, Type, Ast),
 }
-

@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
+use inkwell::AddressSpace;
+use inkwell::IntPredicate;
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
-use inkwell::values::IntValue;
-use inkwell::IntPredicate;
 use inkwell::types::IntType;
-use inkwell::AddressSpace;
+use inkwell::values::IntValue;
 
 use crate::codegen::{Block, CmpOp, CompilationUnit, IType, Instr, Label, LlvmResult, Register};
 use crate::llvm_utils::string_of_label;
@@ -34,15 +34,15 @@ fn resolve<'ctx>(
         LlvmResult::Register(reg) => *regs
             .get(reg)
             .unwrap_or_else(|| panic!("register %{} used before it was defined", reg)),
-        // _ => panic!("resolve: unexpected LlvmResult variant {:?}", r), 
+        // _ => panic!("resolve: unexpected LlvmResult variant {:?}", r),
     }
 }
 
 trait TypeOf {
-    fn type_of(&self,t:&IType) -> IntType<'_>;
+    fn type_of(&self, t: &IType) -> IntType<'_>;
 }
 impl TypeOf for Context {
-    fn type_of(&self,t:&IType) -> IntType<'_> {
+    fn type_of(&self, t: &IType) -> IntType<'_> {
         match t {
             IType::I1 => self.bool_type(),
             IType::I32 => self.i32_type(),
@@ -90,9 +90,15 @@ pub fn emit_llvm_module<'ctx>(context: &'ctx Context, cu: &CompilationUnit) -> M
 }
 
 // Promotes an i1 result to i32; leaves an already-i32 result unchanged.
-fn widen_to_i32<'ctx>(context: &'ctx Context, builder: &Builder<'ctx>, value: IntValue<'ctx>) -> IntValue<'ctx> {
+fn widen_to_i32<'ctx>(
+    context: &'ctx Context,
+    builder: &Builder<'ctx>,
+    value: IntValue<'ctx>,
+) -> IntValue<'ctx> {
     if value.get_type().get_bit_width() < 32 {
-        builder.build_int_z_extend(value, context.i32_type(), "widen").unwrap()
+        builder
+            .build_int_z_extend(value, context.i32_type(), "widen")
+            .unwrap()
     } else {
         value
     }
@@ -117,7 +123,11 @@ fn print_result<'ctx>(
     let arg = widen_to_i32(context, builder, result);
 
     builder
-        .build_call(printf_fn, &[fmt.as_pointer_value().into(), arg.into()], "printf_call")
+        .build_call(
+            printf_fn,
+            &[fmt.as_pointer_value().into(), arg.into()],
+            "printf_call",
+        )
         .unwrap();
 }
 
@@ -135,7 +145,10 @@ pub fn write_llvm_bitcode_to_file(cu: &CompilationUnit, filename: &str) -> std::
     if module.write_bitcode_to_path(std::path::Path::new(filename)) {
         Ok(())
     } else {
-        Err(std::io::Error::new(std::io::ErrorKind::Other, "Failed to export module's bytecode"))
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Failed to export module's bytecode",
+        ))
     }
 }
 
@@ -161,7 +174,7 @@ fn emit_block<'ctx>(
 fn emit_instr<'ctx>(
     context: &'ctx Context,
     builder: &Builder<'ctx>,
-    _blocks: &HashMap<Label, BasicBlock<'ctx>>,
+    blocks: &HashMap<Label, BasicBlock<'ctx>>,
     regs: &mut HashMap<Register, IntValue<'ctx>>,
     instr: &Instr,
 ) {
@@ -171,31 +184,31 @@ fn emit_instr<'ctx>(
             let rhs = resolve(context, regs, r2);
             let result = builder.build_int_add(lhs, rhs, "addtmp").unwrap();
             regs.insert(*ret, result);
-        },
+        }
         Instr::Subi32(ret, r1, r2) => {
             let lhs = resolve(context, regs, r1);
             let rhs = resolve(context, regs, r2);
             let result = builder.build_int_sub(lhs, rhs, "subtmp").unwrap();
             regs.insert(*ret, result);
-        },
+        }
         Instr::Muli32(ret, r1, r2) => {
             let lhs = resolve(context, regs, r1);
             let rhs = resolve(context, regs, r2);
             let result = builder.build_int_mul(lhs, rhs, "multmp").unwrap();
             regs.insert(*ret, result);
-        },
+        }
         Instr::Divi32(ret, r1, r2) => {
             let lhs = resolve(context, regs, r1);
             let rhs = resolve(context, regs, r2);
             let result = builder.build_int_signed_div(lhs, rhs, "divtmp").unwrap();
             regs.insert(*ret, result);
-        },
+        }
         Instr::Xor(ret, r1, r2) => {
             let lhs = resolve(context, regs, r1);
             let rhs = resolve(context, regs, r2);
             let result = builder.build_xor(lhs, rhs, "xortmp").unwrap();
             regs.insert(*ret, result);
-        },
+        }
         Instr::Cmp(ret, op, r1, r2, _t) => {
             let lhs = resolve(context, regs, r1);
             let rhs = resolve(context, regs, r2);
@@ -203,6 +216,23 @@ fn emit_instr<'ctx>(
                 .build_int_compare(int_predicate_of(*op), lhs, rhs, "cmptmp")
                 .unwrap();
             regs.insert(*ret, result);
-        },
+        }
+        Instr::Br(l) => {
+            builder.build_unconditional_branch(blocks[l]).unwrap();
+        }
+        Instr::BrI1(cond, l1, l2) => {
+            let cond_val = resolve(context, regs, cond);
+            builder
+                .build_conditional_branch(cond_val, blocks[l1], blocks[l2])
+                .unwrap();
+        }
+        Instr::Phi(ret, t, branches) => {
+            let phi = builder.build_phi(context.type_of(t), "phitmp").unwrap();
+            for (value, label) in branches {
+                let v = resolve(context, regs, value);
+                phi.add_incoming(&[(&v, blocks[label])]);
+            }
+            regs.insert(*ret, phi.as_basic_value().into_int_value()); // Does this only 
+        }
     }
 }

@@ -1,21 +1,22 @@
-
 mod tests {
-    use std::rc::Rc;
     use crate::ast::{self, Ast, Type, TypeData};
+    use crate::ast_typed::AstTypedData;
+    use crate::codegen::{Compile, IType, Instr, LlvmResult};
+    use crate::environment::Env;
     use crate::grammar;
     use crate::interpreter::{Eval, Value};
-    use crate::environment::Env;
     use crate::typing::TypeCheck;
-    use crate::ast_typed::AstTypedData;
-    use crate::codegen::{Compile, LlvmResult, Instr, IType};
     use inkwell::context::Context;
+    use std::rc::Rc;
 
     fn parse(s: &str) -> Ast {
         grammar::CondParser::new().parse(s).unwrap()
     }
 
     fn type_check(s: &str) -> Result<Type, String> {
-        parse(s).type_check(Rc::new(Env::new())).map(|t| t.type_of())
+        parse(s)
+            .type_check(Rc::new(Env::new()))
+            .map(|t| t.type_of())
     }
 
     fn int_t() -> Type {
@@ -316,8 +317,11 @@ mod tests {
 
         assert!(ir.contains("declare i32 @printf(ptr, ...)"), "{}", ir);
         // printed before main returns, though main always exits with 0
-        assert!(ir.contains("call i32 (ptr, ...) @printf(ptr @fmt, i32 3)"), "{}", ir);
+        assert!(
+            ir.contains("call i32 (ptr, ...) @printf(ptr @fmt, i32 3)"),
+            "{}",
+            ir
+        );
         assert!(ir.contains("ret i32 0"), "{}", ir);
     }
-
 }
